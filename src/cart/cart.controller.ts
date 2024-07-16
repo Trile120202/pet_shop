@@ -6,7 +6,7 @@ import { JwtAuthGuard } from "../../security/auth";
 export class CartController {
   constructor(private readonly service: CartService) {
   }
-  
+
 
   @UseGuards(JwtAuthGuard)
   @Post("add-cart-item")
@@ -19,4 +19,11 @@ export class CartController {
   getCart(@Request() req, @Res({ passthrough: true }) res: any) {
     return this.service.getListItemWithCart(req.user.sub);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("delete-cart-item")
+  deleteCartItem(@Body()body: any, @Request() req, @Res({ passthrough: true }) res: any) {
+    return this.service.deleteItemCart(req.user.sub, body.productId);
+  }
+
 }

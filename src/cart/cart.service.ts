@@ -10,17 +10,17 @@ export class CartService {
   }
 
   addToCart = async (userId: string, productId: string, quantity: number) => {
-    let cart;
+    let cartData;
     let res;
-    cart = await this.db.cart.findFirst({
+    cartData = await this.db.cart.findFirst({
       where: {
         userId,
         status: StatusEnum.ACTIVE
       }
     });
 
-    if (!cart) {
-      cart = await this.db.cart.create({
+    if (!cartData) {
+      cartData = await this.db.cart.create({
         data: {
           userId
         }
@@ -28,14 +28,14 @@ export class CartService {
     } else {
       const checkProductId = await this.db.cartItem.findFirst({
         where: {
-          cartId: cart.id,
+          cartId: cartData.id,
           productId
         }
       });
       if (!checkProductId) {
         res = await this.db.cartItem.create({
           data: {
-            cartId: cart.id,
+            cartId: cartData.id,
             productId,
             quantity
           }
@@ -61,50 +61,72 @@ export class CartService {
   };
 
   getListItemWithCart = async (userId: string) => {
-    try {
-      const res = await this.db.cart.findMany({
-        where: {
-          userId,
-          status: StatusEnum.ACTIVE
-        }, include: {
-          cartItems: true
+    const res = await this.db.cart.findMany({
+      where: {
+        userId,
+        status: StatusEnum.ACTIVE
+      }, include: {
+        cartItems: {
+          include: {
+            product: {
+              include: {
+                imageUrl: {
+                  select: {
+                    imageUrl: true
+                  }
+                }
+              }
+            }
+          }
         }
-      });
 
-      return {
-        statusCode: 200,
-        message: "Get list item with cart successfully",
-        data: res
-      };
-    } catch (error) {
+      }
+    });
 
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
+    return {
+      statusCode: 200,
+      message: "Get list item with cart successfully",
+      data: res
+    };
   };
 
 
-  updateCart = async () => {
-  };
+  deleteItemCart = async (userId: string, productId: string) => {
+    const cartData = await this.db.cart.findFirst({
+      where: {
+        userId, status: StatusEnum.ACTIVE
+      }
+    });
 
-  addItemInCart = async () => {
-    try {
-
-
-    } catch (error) {
-
+    if (!cartData) {
       return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
+        statusCode: 404,
+        message: "Cart not found"
       };
     }
-  };
+    const cartItemData = await this.db.cartItem.findFirst({
+      where: {
+        cartId: cartData.id,
+        productId
+      }
+    });
+    if (!cartItemData) {
+      return {
+        statusCode: 404,
+        message: "Cart item not found"
+      };
+    }
+    const res = await this.db.cartItem.delete({
+      where: {
+        id: cartItemData.id
+      }
+    });
+    return {
+      statusCode: 200,
+      message: "Cart item deleted successfully",
+      data: res
+    };
 
-  removeItemInCart = async () => {
   };
 
   createItemCart = async (data: any) => {

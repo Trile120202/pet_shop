@@ -5,5 +5,5 @@ export class CreateProductDto {
   oldPrice: string
   description?: string
   title: string
-  image: string
+  image: [string]
 }
