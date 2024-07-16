@@ -54,7 +54,11 @@ export class OrderService {
       include: {
         orderItems: {
           include: {
-            product: true
+            product: {
+              include: {
+                imageUrl: true
+              }
+            }
           }
         }
       }
@@ -70,7 +74,9 @@ export class OrderService {
           id: item.product.id,
           name: item.product.name,
           price: item.price,
-          quantity: item.quantity
+          description: item.product.description,
+          quantity: item.quantity,
+          imageUrl: item.product.imageUrl
         });
       });
 
