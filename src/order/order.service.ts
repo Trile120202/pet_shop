@@ -52,15 +52,43 @@ export class OrderService {
         userId
       },
       include: {
-        orderItems: true
+        orderItems: {
+          include: {
+            product: true
+          }
+        }
       }
+    });
+
+    let res = [];
+
+    data.forEach((e) => {
+
+      let products = [];
+      e.orderItems.forEach((item) => {
+        products.push({
+          id: item.product.id,
+          name: item.product.name,
+          price: item.price,
+          quantity: item.quantity
+        });
+      });
+
+      res.push({
+        id: e.id,
+        total: e.total,
+        deliveryStatus: e.deliveryStatus,
+        paymentStatus: e.paymentStatus,
+        status: e.status,
+        products
+      });
+
     });
     return {
       statusCode: 200,
-      message: "Success",
-      data
+      message: "Get order successfully",
+      data: res
     };
-
   };
 
 }
