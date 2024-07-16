@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Request, Res, UseGuards } from "@nestjs/common";
 import { CreateProductDto, UpdateProductDto } from "./dto";
 import { ProductService } from "./product.service";
 import { JwtAuthGuard } from "../../security/auth";
@@ -23,14 +23,36 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Post("delete")
   delete(@Query("id") id: string) {
-    console.log(id);
     return this.service.delete(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post("list")
-  list(@Query("offset") offset: number, @Query("limit") limit: number) {
-    return this.service.list(offset ?? 0, limit ?? 20);
+  list(@Query("offset") offset: number, @Query("limit") limit: number, @Query("search") search, @Request() req, @Res({ passthrough: true }) res: any) {
+    return this.service.list(offset ?? 0, limit ?? 20, search ?? "", req.user.sub);
+  }
+
+  @Get("get-list-product")
+  async getListProduct(@Query("offset") offset: number, @Query("limit") limit: number, @Query("search") search: string) {
+    return await this.service.getListProduct(offset ?? 0, limit ?? 20, search ?? "");
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("favorite")
+  favorite(@Query("id") id: string, @Request() req, @Res({ passthrough: true }) res: any) {
+    return this.service.favorite(req.user.sub, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("unfavorite")
+  unfavorite(@Query("id") id: string, @Request() req, @Res({ passthrough: true }) res: any) {
+    return this.service.unfavorite(req.user.sub, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("get-favorite")
+  getFavorite(@Request() req, @Res({ passthrough: true }) res: any) {
+    return this.service.getProductFavorite(req.user.sub);
   }
 
 }

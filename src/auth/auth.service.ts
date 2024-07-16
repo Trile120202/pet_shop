@@ -17,7 +17,11 @@ export class AuthService {
 
   signJwt = async (userId: string, email: string): Promise<string> => {
     const payload = { sub: userId, email };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload,{
+      expiresIn: process.env.EXPIRES,
+      secret: process.env.SECRET_KEY,
+      issuer: 'monorail',
+    });
   };
 
   register = async (body: UserRegisterDto) => {
@@ -96,22 +100,10 @@ export class AuthService {
         };
       }
 
-      const userResult = await this.db.user.findMany({
-        where: {
-          OR: [
-            { email: obj.email },
-            { username: obj.email },
-          ],
-          AND: [
-            { status: StatusEnum.ACTIVE },
-          ],
-        },
-        take: 1,
+      const user = await this.db.user.findUnique({
+        where: { email: obj.email },
       });
 
-      console.log(userResult[0].password);
-
-      const user = userResult[0];
       if (!user) {
         return {
           statusCode: HttpStatus.NOT_FOUND,
@@ -128,7 +120,10 @@ export class AuthService {
         const passwordMatched = await argon2.verify(user.password, obj.password);
 
         if (passwordMatched) {
-          const result = await this.signJwt(user.id.toString(), user.email);
+
+          
+
+          const result = await this.signJwt(user.id, user.email);
           return {
             statusCode: HttpStatus.OK,
             message: 'Login successfully',
@@ -142,6 +137,8 @@ export class AuthService {
           };
         }
       }
+
+
 
     } catch (error) {
       return {

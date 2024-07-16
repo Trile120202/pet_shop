@@ -6,6 +6,8 @@ import { AuthModule } from "./auth/auth.module";
 import { ConfigModule } from '@nestjs/config';
 import { JwtStrategy } from "../security/auth";
 import { ProductModule } from './product/product.module';
+import { CartModule } from './cart/cart.module';
+import { OrderModule } from './order/order.module';
 
 
 
@@ -13,7 +15,9 @@ import { ProductModule } from './product/product.module';
 
   imports: [PrismaModule, AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
-    ProductModule],
+    ProductModule,
+    CartModule,
+    OrderModule],
   controllers: [AppController],
   providers: [AppService,JwtStrategy]
 })
