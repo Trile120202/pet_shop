@@ -157,5 +157,15 @@ export class AuthService {
     };
   };
 
+  updateUser=async (userId: string, data: any)=> {
+    return await this.db.user.update({
+      where: {
+        id: userId
+      },
+      data
+    })
+  }
+
+
 
 }

@@ -92,33 +92,9 @@ export class CartService {
 
 
   deleteItemCart = async (userId: string, productId: string) => {
-    const cartData = await this.db.cart.findFirst({
-      where: {
-        userId, status: StatusEnum.ACTIVE
-      }
-    });
-
-    if (!cartData) {
-      return {
-        statusCode: 404,
-        message: "Cart not found"
-      };
-    }
-    const cartItemData = await this.db.cartItem.findFirst({
-      where: {
-        cartId: cartData.id,
-        productId
-      }
-    });
-    if (!cartItemData) {
-      return {
-        statusCode: 404,
-        message: "Cart item not found"
-      };
-    }
     const res = await this.db.cartItem.delete({
       where: {
-        id: cartItemData.id
+        id: productId
       }
     });
     return {
@@ -126,7 +102,6 @@ export class CartService {
       message: "Cart item deleted successfully",
       data: res
     };
-
   };
 
   createItemCart = async (data: any) => {
