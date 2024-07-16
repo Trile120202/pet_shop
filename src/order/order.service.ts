@@ -11,7 +11,7 @@ export class OrderService {
     try {
       const product = await this.db.product.findFirst({
         where: {
-          id: data.productId
+          id: data.productId,
         }
       });
       if (!product) {
@@ -20,10 +20,6 @@ export class OrderService {
           message: "Product not found"
         };
       }
-      if (data.quantity > product.quantity) {
-        data.quantity = product.quantity;
-      }
-      const price = Number(product.price) * Number(data.quantity);
 
       const res = await this.db.$transaction([
         this.db.order.update({
@@ -38,17 +34,6 @@ export class OrderService {
         this.db.orderItem.create({
           data: {
             ...data,
-            price,
-          }
-        }),
-        this.db.product.update({
-          where: {
-            id: product.id
-          },
-          data: {
-            quantity: {
-              decrement: data.quantity
-            }
           }
         })
       ])
@@ -70,7 +55,10 @@ export class OrderService {
     try {
       const order = await this.db.order.create({
         data: {
-          userId
+          userId,
+          deliveryStatus:"123",
+          paymentStatus:"321",
+          total: "123",
         }
       });
       return {

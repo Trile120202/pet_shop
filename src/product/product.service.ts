@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { CreateProductDto, UpdateProductDto } from "./dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { StatusEnum } from "../../configs/enum";
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class ProductService {
@@ -9,38 +10,42 @@ export class ProductService {
   }
 
   create = async (data: CreateProductDto) => {
-    try {
-      const product = await this.db.product.create({
+    const id = uuidv4();
+    const e = await this.db.$transaction([
+      this.db.product.create({
         data: {
-          ...data
+          title: data.title,
+          description: data.description,
+          name: data.name,
+          price: data.price,
+          oldPrice: data.oldPrice,
+          category: data.category,
+          status: StatusEnum.ACTIVE,
+          id
         }
-      });
-      return {
-        statusCode: 200,
-        message: "Product created successfully",
-        data: product
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
+      }),
+      this.db.image.create({
+        data: {
+          imageUrl: data.image,
+          productId: id
+        }
+      })
+    ]);
+    return {
+      statusCode: 200,
+      message: "Product created successfully",
+      data: e
+    };
   };
 
   update = async (data: UpdateProductDto) => {
 
     try {
-
-
       const product = await this.db.product.update({
         where: { id: data.id },
         data: {
           name: data.name,
-          image: data.image,
-          price: data.price,
-          quantity: data.quantity
+          price: data.price
         }
       });
       return {
@@ -80,68 +85,94 @@ export class ProductService {
   }
 
   list = async (offset: number, limit: number, search: string, idUser: string) => {
-    try {
-      const products = await this.db.product.findMany({
-        skip: offset,
-        take: limit,
-        where: {
-          name: {
-            contains: search
+    const products = await this.db.product.findMany({
+      skip: offset,
+      take: limit,
+      where: {
+        OR: [
+          {
+            name: {
+              contains: search
+            }
           },
-          status: StatusEnum.ACTIVE
-        },
-        include: {
-          UserProductFavorite: {
-            select: {
-              id: true,
-              userId: true
+          {
+            category: {
+              contains: search
             }
           }
+        ],
+        status: StatusEnum.ACTIVE
+      },
+      include: {
+        UserProductFavorite: {
+          select: {
+            id: true,
+            userId: true
+          }
+        },
+        imageUrl: {
+          select: {
+            imageUrl: true
+          }
         }
-      });
+      }
+    });
 
-
-      const productsWithFavoriteFlag = products.map((product) => {
-        const isFavorite = product.UserProductFavorite.some((favorite) => favorite.userId === idUser);
-        const totalFavorite = product.UserProductFavorite.length;
-        return {
-          ...product,
-          isFavorite,
-          totalFavorite
-        };
-      });
-
-      const total = await this.db.product.count();
-
-      const page = Math.ceil(total / limit);
-
-      const result = { products: productsWithFavoriteFlag, total, page };
-
+    const productsWithFavoriteFlag = products.map((product) => {
+      const isFavorite = product.UserProductFavorite.some((favorite) => favorite.userId === idUser);
+      const totalFavorite = product.UserProductFavorite.length;
       return {
-        statusCode: 200,
-        message: "Product list successfully",
-        data: result
+        ...product,
+        isFavorite,
+        totalFavorite,
+        imageUrl: product.imageUrl.map((image) => image.imageUrl)
       };
+    });
 
+    const total = await this.db.product.count({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: search
+            }
+          },
+          {
+            category: {
+              contains: search
+            }
+          }
+        ],
+        status: StatusEnum.ACTIVE
+      }
+    });
 
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
+    const page = Math.ceil(total / limit);
 
+    const result = { products: productsWithFavoriteFlag, total, page };
+
+    return {
+      statusCode: 200,
+      message: "Product list successfully",
+      data: result
+    };
   };
-
   getListProduct = async (offset: number, limit: number, search: string) => {
     try {
-
       const products = await this.db.product.findMany({
         where: {
-          name: {
-            contains: search
-          },
+          OR: [
+            {
+              name: {
+                contains: search
+              }
+            },
+            {
+              category: {
+                contains: search
+              }
+            }
+          ],
           status: StatusEnum.ACTIVE
         },
         skip: offset,
@@ -152,17 +183,30 @@ export class ProductService {
               id: true,
               userId: true
             }
+          },
+          imageUrl: {
+            select: {
+              imageUrl: true
+            }
           }
         }
-
       });
-
 
       const total = await this.db.product.count({
         where: {
-          name: {
-            contains: search
-          }
+          OR: [
+            {
+              name: {
+                contains: search
+              }
+            },
+            {
+              category: {
+                contains: search
+              }
+            }
+          ],
+          status: StatusEnum.ACTIVE
         }
       });
 
@@ -170,22 +214,20 @@ export class ProductService {
         const totalFavorite = product.UserProductFavorite.length;
         return {
           ...product,
-          totalFavorite
+          totalFavorite,
+          imageUrl: product.imageUrl.map((image) => image.imageUrl)
         };
       });
 
       const page = Math.ceil(total / limit);
 
-
       const result = { products: productsWithFavoriteFlag, total, page };
-
 
       return {
         statusCode: 200,
         message: "Product list successfully",
         data: result
       };
-
     } catch (error) {
       return {
         statusCode: 500,
@@ -193,52 +235,44 @@ export class ProductService {
         error
       };
     }
-
-
   };
-
-  favorite = async (userId: string, productId: string) => {
+  toggleFavorite = async (userId: string, productId: string) => {
     try {
-      const product = await this.db.product.update({
-        where: { id: productId },
-        data: {
-          UserProductFavorite: {
-            create: {
-              userId
-            }
-          }
+      const existingFavorite = await this.db.userProductFavorite.findFirst({
+        where: {
+          userId,
+          productId
         }
       });
-      return {
-        statusCode: 200,
-        message: "Product favorite successfully",
-        data: product
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
-  };
 
-  unfavorite = async (userId: string, productId: string) => {
-    try {
-      const result = await this.db.userProductFavorite.deleteMany(
-        {
+      if (existingFavorite) {
+        await this.db.userProductFavorite.delete({
           where: {
-            userId,
-            productId
+            id: existingFavorite.id
           }
-        }
-      );
-      return {
-        statusCode: 200,
-        message: "Product unfavorite successfully",
-        data: result
-      };
+        });
 
+        return {
+          statusCode: 200,
+          message: "Product unfavorited successfully"
+        };
+      } else {
+        await this.db.product.update({
+          where: { id: productId },
+          data: {
+            UserProductFavorite: {
+              create: {
+                userId
+              }
+            }
+          }
+        });
+
+        return {
+          statusCode: 200,
+          message: "Product favorited successfully"
+        };
+      }
     } catch (error) {
       return {
         statusCode: 500,
@@ -247,6 +281,7 @@ export class ProductService {
       };
     }
   };
+
 
   getProductFavorite = async (userId: string) => {
     try {

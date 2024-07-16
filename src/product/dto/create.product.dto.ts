@@ -1,6 +1,9 @@
 export class CreateProductDto {
-  image: string
   name: string
   price: string
-  quantity: number
+  category: string
+  oldPrice: string
+  description?: string
+  title: string
+  image: string
 }

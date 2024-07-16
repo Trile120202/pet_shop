@@ -29,16 +29,25 @@ model User {
   UserProductFavorite UserProductFavorite[]
 }
 
-model Product {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  image     String
-  name      String
-  price     String
-  quantity  Int
-  status    Int       @default(1)
-  createdAt DateTime? @default(now())
-  updatedAt DateTime? @updatedAt
+model Image {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  imageUrl  String
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+}
 
+model Product {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category            String
+  imageUrl            Image[]
+  title               String
+  name                String
+  price               String
+  oldPrice            String
+  description         String?
+  status              Int                   @default(1)
+  createdAt           DateTime?             @default(now())
+  updatedAt           DateTime?             @updatedAt
   orderItems          OrderItem[]
   cartItems           CartItem[]
   UserProductFavorite UserProductFavorite[]
@@ -56,13 +65,16 @@ model UserProductFavorite {
 }
 
 model Order {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String      @db.Uuid
-  status     Int         @default(1)
-  createdAt  DateTime?   @default(now())
-  updatedAt  DateTime?   @updatedAt
-  user       User        @relation(fields: [userId], references: [id])
-  orderItems OrderItem[]
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String      @db.Uuid
+  total          String
+  deliveryStatus String
+  paymentStatus  String
+  status         Int         @default(1)
+  createdAt      DateTime?   @default(now())
+  updatedAt      DateTime?   @updatedAt
+  user           User        @relation(fields: [userId], references: [id])
+  orderItems     OrderItem[]
 }
 
 model Cart {

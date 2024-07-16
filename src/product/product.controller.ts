@@ -40,15 +40,9 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Post("favorite")
   favorite(@Query("id") id: string, @Request() req, @Res({ passthrough: true }) res: any) {
-    return this.service.favorite(req.user.sub, id);
+    return this.service.toggleFavorite(req.user.sub, id);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Post("unfavorite")
-  unfavorite(@Query("id") id: string, @Request() req, @Res({ passthrough: true }) res: any) {
-    return this.service.unfavorite(req.user.sub, id);
-  }
-
+  
   @UseGuards(JwtAuthGuard)
   @Post("get-favorite")
   getFavorite(@Request() req, @Res({ passthrough: true }) res: any) {
