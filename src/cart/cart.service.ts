@@ -7,97 +7,57 @@ export class CartService {
   constructor(
     private readonly db: PrismaService
   ) {
-
   }
 
-  findCart = async (userId: string, status: StatusEnum = StatusEnum.ACTIVE) =>
-    await this.db.cart.findFirst({
+  addToCart = async (userId: string, productId: string, quantity: number) => {
+    let cart;
+    let res;
+    cart = await this.db.cart.findFirst({
       where: {
         userId,
-        status
+        status: StatusEnum.ACTIVE
       }
     });
 
-
-  createCart = async (userId: string) => {
-    try {
-      const cart = await this.findCart(userId, StatusEnum.ACTIVE);
-      if (!cart) {
-        const res = await this.db.cart.create({
-          data: {
-            userId
-          }
-        });
-        return {
-          statusCode: 200,
-          message: "Cart created successfully",
-          data: res
-        };
-      }
-      return {
-        statusCode: 200,
-        message: "Cart already exists",
-        data: cart
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
-  };
-
-  addToCart = async (userId: string, productId: string, quantity: number) => {
-    const cart = await this.findCart(userId, StatusEnum.ACTIVE);
-    if (cart) {
-      const item = await this.db.cartItem.findFirst({
+    if (!cart) {
+      cart = await this.db.cart.create({
+        data: {
+          userId
+        }
+      });
+    } else {
+      const checkProductId = await this.db.cartItem.findFirst({
         where: {
           cartId: cart.id,
           productId
         }
       });
-      if (item) {
-        const res = await this.db.cartItem.update({
-          where: {
-            id: item.id
-          },
+      if (!checkProductId) {
+        res = await this.db.cartItem.create({
           data: {
-            quantity: quantity
+            cartId: cart.id,
+            productId,
+            quantity
           }
         });
-        return {
-          statusCode: 200,
-          message: "Item updated successfully",
-          data: res
-        };
-      }
-      const itemCart = await this.db.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId,
-          quantity
-        }
-      });
-
-      if (itemCart) {
-        return {
-          statusCode: 200,
-          message: "Item added successfully",
-          data: itemCart
-        };
       } else {
-        return {
-          statusCode: 500,
-          message: "Internal server error"
-        };
+        res = await this.db.cartItem.update({
+          where: {
+            id: checkProductId.id
+          },
+          data: {
+            quantity: quantity,
+            productId: productId
+          }
+        });
       }
-    } else {
-      return {
-        statusCode: 404,
-        message: "Cart not found"
-      };
+
     }
+    return {
+      statusCode: 200,
+      message: "Cart item created successfully",
+      data: res
+    };
   };
 
   getListItemWithCart = async (userId: string) => {
@@ -167,7 +127,5 @@ export class CartService {
         error
       };
     }
-
   };
-
 }

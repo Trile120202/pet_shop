@@ -6,12 +6,7 @@ import { JwtAuthGuard } from "../../security/auth";
 export class CartController {
   constructor(private readonly service: CartService) {
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Post("")
-  createCart(@Request() req, @Res({ passthrough: true }) res: any) {
-    return this.service.createCart(req.user.sub);
-  }
+  
 
   @UseGuards(JwtAuthGuard)
   @Post("add-cart-item")
