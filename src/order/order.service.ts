@@ -1,77 +1,94 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EnumStatusOrder } from "../../configs/enum";
+import { v4 as uuidv4 } from "uuid";
+
 
 @Injectable()
 export class OrderService {
   constructor(
     private readonly db: PrismaService
-  ) {}
-  createItem = async (data: any) => {
-    try {
-      const product = await this.db.product.findFirst({
-        where: {
-          id: data.productId,
+  ) {
+  }
+
+  createOrder = async (data: any) => {
+    const id = uuidv4();
+
+    const { userId, paymentUrl, cartItems } = data;
+
+    const orderItems = cartItems.map(item => ({
+      id: uuidv4(),
+      orderId: id,
+      productId: item.id,
+      quantity: item.cartQuantity,
+      price: item.price
+    }));
+
+    const total = cartItems.reduce((sum, item) => sum + parseFloat(item.price) * item.cartQuantity, 0).toString();
+
+    const order = {
+      id,
+      userId,
+      total,
+      paymentUrl,
+      deliveryStatus: "Pending",
+      paymentStatus: "Pending",
+      status: 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await this.db.$transaction([
+      this.db.order.create({ data: order }),
+      ...orderItems.map(item => this.db.orderItem.create({ data: item }))
+    ]);
+
+    return order;
+  };
+
+  findAllOrders = async (userId: string) => {
+    const data = await this.db.order.findMany({
+      where: {
+        userId
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: true
+          }
         }
-      });
-      if (!product) {
-        return {
-          statusCode: 404,
-          message: "Product not found"
-        };
       }
+    });
 
-      const res = await this.db.$transaction([
-        this.db.order.update({
-          where: {
-            id: data.orderId
-          },
-          data: {
-            status: EnumStatusOrder.PENDING
-          }
-        }),
+    let res = [];
 
-        this.db.orderItem.create({
-          data: {
-            ...data,
-          }
-        })
-      ])
-      return {
-        statusCode: 200,
-        message: "Item created successfully",
-        data: res
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
-  };
+    data.forEach((e) => {
 
-  createOrder = async (userId: string, data: any) => {
-    try {
-      const order = await this.db.order.create({
-        data: {
-          userId,
-          deliveryStatus:"123",
-          paymentStatus:"321",
-          total: "123",
-        }
+      let products = [];
+      e.orderItems.forEach((item) => {
+        products.push({
+          id: item.product.id,
+          name: item.product.name,
+          price: item.price,
+          quantity: item.quantity
+        });
       });
-      return {
-        statusCode: 200,
-        message: "Order created successfully",
-        data: order
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: "Internal server error",
-        error
-      };
-    }
+
+      res.push({
+        id: e.id,
+        total: e.total,
+        deliveryStatus: e.deliveryStatus,
+        paymentStatus: e.paymentStatus,
+        status: e.status,
+        products
+      });
+
+    });
+    return {
+      statusCode: 200,
+      message: "Get order successfully",
+      data: res
+    };
   };
+
 }

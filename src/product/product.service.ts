@@ -24,12 +24,20 @@ export class ProductService {
           id
         }
       }),
-      this.db.image.create({
-        data: {
-          imageUrl: data.image,
-          productId: id
-        }
-      })
+      ...data.image.map((imageUrl: string) =>
+        this.db.image.create({
+          data: {
+            imageUrl,
+            productId: id,
+          },
+        })
+      ),
+      // this.db.image.create({
+      //   data: {
+      //     imageUrl: data.image,
+      //     productId: id
+      //   }
+      // })
     ]);
     return {
       statusCode: 200,
