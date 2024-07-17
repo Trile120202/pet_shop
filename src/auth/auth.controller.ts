@@ -23,10 +23,5 @@ export class AuthController {
     return this.service.getProfile(req.user.sub)
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post('update')
-  updateUser(@Request() req,@Body() body:any, @Res({ passthrough: true }) res: any) {
-    return this.service.updateUser(req.user.sub,body)
-  }
 
 }
